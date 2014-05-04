@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<project name="cppplay" default="all" basedir=".">
+  <taskdef resource="cpptasks.tasks">
+    <classpath>
+      <pathelement location="lib/cpptasks.jar"/>
+    </classpath>
+  </taskdef>
+  <taskdef resource="net/sf/antcontrib/antlib.xml">
+    <classpath>
+      <pathelement location="lib/ant-contrib.jar" />
+    </classpath>
+  </taskdef>
+	
+	<target name="init">
+		<echo message="#############################" />
+    <echo message="Initializing build properties" />
+  	<condition property="buildtype" value="debug" else="release">
+      <isset property="debug" />
+    </condition>   
+    <condition property="optimizationoption" value="-O0" else="-O2">
+      <isset property="debug" />
+    </condition>   
+    <condition property="debugoption" value="-g" else="-O2">
+      <isset property="debug" />
+    </condition>
+		<property name="build.dir" value="build" />
+		<property name="boost.header.dir" value="/usr/local/bin/boost" />
+		<property name="boost.lib.dir" value="/usr/local/bin/boost/lib" />
+		<property name="boost.linker.options" value="-I${boost.header.dir} -L${boost.lib.dir} -lboost_system" />
+  </target>
+	
+	<target name="build-init" depends="init">
+		<property name="obj.dir" value="${build.dir}/${buildtype}/obj" />
+	</target>
+	
+	<target name="build-server" depends="build-init">
+		<echo message="##########################" />
+	  <echo message="Building cppplay server" />
+		<property name="server.obj.dir" value="${obj.dir}/server" />
+		<mkdir dir="${server.obj.dir}" />
+		<cc name="g++" objdir="${server.obj.dir}" debug="${debug}" exceptions="true" multithreaded="true" >
+      <fileset dir="server/cpp" includes="*.cpp"/>
+      <compiler name="g++">
+        <compilerarg value="-fexceptions" />
+        <compilerarg value="-pthread" />
+        <compilerarg value="-std=c++11" />
+        <compilerarg value="${debugoption}" />
+        <compilerarg value="${optimizationoption}" />
+      </compiler>
+    </cc>
+		<fileset dir="${server.obj.dir}" id="server.objs.id" >
+      <include name="*.o" />
+    </fileset>
+    <pathconvert pathsep=" " property="server.objs" refid="server.objs.id" />
+		<!-- Due to a bug in GppLinker.java in cpptasks.jar, we must exec g++ because GppLinker erroneously uses gcc, which breaks exception handling. -->
+    <exec command="g++ -fexceptions -pthread -std=c++11 -o ${build.dir}/${buildtype}/server ${server.objs} ${boost.linker.options} ${debugoption}" dir="${basedir}" failonerror="true" />
+	</target>
+	
+	<target name="build-client" depends="build-init">
+    <echo message="##########################" />
+    <echo message="Building cppplay client" />
+    <property name="client.obj.dir" value="${obj.dir}/client" />
+    <mkdir dir="${client.obj.dir}" />
+    <cc name="g++" objdir="${client.obj.dir}" debug="${debug}" exceptions="true" multithreaded="true" >
+      <fileset dir="client/cpp" includes="*.cpp"/>
+      <compiler name="g++">
+        <compilerarg value="-fexceptions" />
+        <compilerarg value="-pthread" />
+        <compilerarg value="-std=c++11" />
+        <compilerarg value="${debugoption}" />
+        <compilerarg value="${optimizationoption}" />
+      </compiler>
+    </cc>
+		<fileset dir="${client.obj.dir}" id="client.objs.id" >
+      <include name="*.o" />
+    </fileset>
+    <pathconvert pathsep=" " property="client.objs" refid="client.objs.id" />
+    <!-- Due to a bug in GppLinker.java in cpptasks.jar, we must exec g++ because GppLinker erroneously uses gcc, which breaks exception handling. -->
+    <exec command="g++ -fexceptions -pthread -std=c++11 -o ${build.dir}/${buildtype}/client ${client.objs} ${boost.linker.options} ${debugoption}" dir="${basedir}" failonerror="true" />
+  </target>
+	
+	<target name="build" depends="build-server, build-client" />
+		<target name="test" depends="build">
+	  <!--
+		<echo message="##############################" />
+		<echo message="Invoking cppplay client" />
+		// -->
+	</target>
+	
+	<target name="clean">
+    <delete dir="build" />
+  </target>
+
+  <target name="all" depends="clean, build" />
+	
+</project>
